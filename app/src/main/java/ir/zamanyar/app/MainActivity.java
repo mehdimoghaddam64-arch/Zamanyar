@@ -13,27 +13,42 @@ import java.text.*;
 public class MainActivity extends Activity {
  Db db; LinearLayout base,body,nav; String tab="داشبورد";
  int ink=Color.rgb(33,37,62),purple=Color.rgb(92,71,194),muted=Color.rgb(115,120,140);
- int surface=0xfff6f5fc;
+ int surface=0xfff6f5fc; boolean dark=true; android.content.SharedPreferences prefs;
+ int panel(){return dark?0xff1c202b:Color.WHITE;} int fieldColor(){return dark?0xff282d3a:0xfff0eff7;}
+ String fa(String value){return value.replace('0','۰').replace('1','۱').replace('2','۲').replace('3','۳').replace('4','۴').replace('5','۵').replace('6','۶').replace('7','۷').replace('8','۸').replace('9','۹');}
+ String[] categories(){String raw=prefs.getString("categories","مالی\nکاری\nمارکتینگ\nخرید\nشخصی");return raw.split("\n");}
+ void settings(){
+  LinearLayout panel=column();panel.setPadding(dp(18),dp(12),dp(18),dp(12));
+  Switch mode=new Switch(this);mode.setText("حالت تیره");mode.setTextColor(ink);mode.setChecked(dark);panel.addView(mode);
+  mode.setOnCheckedChangeListener((v,checked)->{prefs.edit().putBoolean("dark",checked).apply();dark=checked;applyTheme();show("داشبورد");});
+  panel.addView(text("دسته‌بندی‌ها (هر سطر یک دسته)",16,ink,true));
+  EditText list=new EditText(this);list.setText(prefs.getString("categories","مالی\nکاری\nمارکتینگ\nخرید\nشخصی"));list.setMinLines(6);list.setTextColor(ink);list.setBackground(bg(fieldColor(),12));list.setPadding(dp(12),dp(12),dp(12),dp(12));panel.addView(list);
+  new AlertDialog.Builder(this).setTitle("تنظیمات زمان‌یار").setView(panel).setPositiveButton("ذخیره دسته‌بندی‌ها",(d,w)->{LinkedHashSet<String> names=new LinkedHashSet<>();for(String name:list.getText().toString().split("\n")){name=name.trim();if(!name.isEmpty())names.add(name);}prefs.edit().putString("categories",android.text.TextUtils.join("\n",names)).apply();show(tab);}).setNegativeButton("بستن",null).show();
+ }
+ void applyTheme(){surface=dark?0xff101319:0xfff6f5fc;ink=dark?0xfff1efff:0xff21253e;muted=dark?0xffa5a8b8:0xff73788c;purple=dark?0xff895cff:0xff5c47c2;getWindow().setStatusBarColor(surface);getWindow().setNavigationBarColor(surface);getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);}
+ void timePicker(EditText field){Calendar now=Calendar.getInstance();int h=now.get(Calendar.HOUR_OF_DAY),m=now.get(Calendar.MINUTE);String current=field.getText().toString();if(validTime(current)){String[] t=current.split(":");h=Integer.parseInt(t[0]);m=Integer.parseInt(t[1]);}new TimePickerDialog(this,(v,hour,minute)->field.setText(String.format(Locale.US,"%02d:%02d",hour,minute)),h,m,true).show();}
+ void checklistDialog(ContentValues e){String[] lines=val(e,"checklist").split("\n");ArrayList<String> items=new ArrayList<>();ArrayList<Boolean> checks=new ArrayList<>();for(String line:lines){if(line.trim().isEmpty())continue;boolean done=line.startsWith("[x] ");checks.add(done);items.add(line.replaceFirst("^\\[(?:x| )\\] ",""));}if(items.isEmpty()){Toast.makeText(this,"زیر‌وظیفه‌ای ثبت نشده است",Toast.LENGTH_SHORT).show();return;}boolean[] selected=new boolean[items.size()];for(int i=0;i<selected.length;i++)selected[i]=checks.get(i);new AlertDialog.Builder(this).setTitle("چک‌لیست: "+val(e,"title")).setMultiChoiceItems(items.toArray(new String[0]),selected,(d,which,on)->selected[which]=on).setPositiveButton("ذخیره",(d,w)->{StringBuilder b=new StringBuilder();for(int i=0;i<items.size();i++){if(i>0)b.append("\n");b.append(selected[i]?"[x] ": "[ ] ").append(items.get(i));}e.put("checklist",b.toString());db.save(e,e.getAsLong("id"));show(tab);}).setNegativeButton("انصراف",null).show();}
+
  String[] tabs={"داشبورد","تقویم","جلسه","وظیفه","رویداد","گزارش"};
  String search=""; int weekOffset=0,monthOffset=0; boolean monthMode=true; static final int BACKUP_CREATE=501,BACKUP_OPEN=502;
  int dp(float n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
  GradientDrawable bg(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
- @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(purple);getWindow().setNavigationBarColor(Color.WHITE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);db=new Db(this);if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},12);show("داشبورد");}
- TextView text(String s,int size,int color,boolean bold){TextView t=new TextView(this);t.setText(s);t.setTextColor(color);t.setTextSize(size);t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);t.setTextDirection(View.TEXT_DIRECTION_RTL);t.setPadding(dp(4),dp(6),dp(4),dp(6));if(bold)t.setTypeface(null,Typeface.BOLD);return t;}
+ @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(purple);getWindow().setNavigationBarColor(Color.WHITE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);prefs=getSharedPreferences("zamanyar_ui",MODE_PRIVATE);dark=prefs.getBoolean("dark",true);applyTheme();db=new Db(this);if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},12);show("داشبورد");}
+ TextView text(String s,int size,int color,boolean bold){TextView t=new TextView(this);t.setText(fa(s));t.setTextColor(color);t.setTextSize(size);t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);t.setTextDirection(View.TEXT_DIRECTION_RTL);t.setPadding(dp(4),dp(6),dp(4),dp(6));if(bold)t.setTypeface(null,Typeface.BOLD);return t;}
  LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(1);l.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);return l;}
  void show(String t){
   tab=t;base=column();base.setBackgroundColor(surface);setContentView(base);
-  LinearLayout head=column();head.setBackgroundColor(purple);head.setPadding(dp(22),dp(22),dp(22),dp(22));
+  LinearLayout head=column();head.setBackgroundColor(panel());head.setPadding(dp(22),dp(22),dp(22),dp(22));
   TextView title=text("زمان‌یار  •  "+t,24,Color.WHITE,true);head.addView(title);
-  TextView sub=text("برنامه‌ریزی دقیق، ذهن آسوده",13,0xffe7e1ff,false);head.addView(sub);base.addView(head);
+  TextView sub=text("برنامه‌ریزی دقیق، ذهن آسوده",13,0xffe7e1ff,false);head.addView(sub);TextView settings=text("⚙  تنظیمات",14,0xffbba7ff,true);head.addView(settings);settings.setOnClickListener(v->settings());base.addView(head);
   ScrollView scroll=new ScrollView(this);body=column();body.setPadding(dp(14),dp(12),dp(14),dp(20));scroll.addView(body);base.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
   if(t.equals("داشبورد"))dashboard();else if(t.equals("تقویم")){if(monthMode)monthPage();else calendarPage();}else if(t.equals("گزارش"))reportPage();else listing(t);
-  nav=new LinearLayout(this);nav.setElevation(dp(9));nav.setBackgroundColor(Color.WHITE);nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+  nav=new LinearLayout(this);nav.setElevation(dp(9));nav.setBackgroundColor(panel());nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
   String[] icons={"⌂","▦","▣","☑","◉","▥"};for(int i=0;i<tabs.length;i++){final String s=tabs[i];TextView b=text(icons[i]+"\n"+s,11,s.equals(t)?purple:muted,s.equals(t));b.setGravity(Gravity.CENTER);nav.addView(b,new LinearLayout.LayoutParams(0,dp(66),1));b.setOnClickListener(v->show(s));}
   base.addView(nav);
  }
  void card(LinearLayout parent,View content){
-  LinearLayout box=column();box.setPadding(dp(14),dp(12),dp(14),dp(12));box.setBackground(bg(Color.WHITE,16));box.setElevation(dp(2));
+  LinearLayout box=column();box.setPadding(dp(14),dp(12),dp(14),dp(12));box.setBackground(bg(panel(),16));box.setElevation(dp(2));
   LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(10);parent.addView(box,p);box.addView(content);
  }
  void dashboard(){
@@ -57,7 +72,7 @@ public class MainActivity extends Activity {
   Button backup=button("پشتیبان‌گیری و بازیابی");body.addView(backup);backup.setOnClickListener(v->backupMenu());
  }
  void metric(LinearLayout parent,String label,int count,String icon,int color){
-  LinearLayout box=column();box.setPadding(dp(14),dp(10),dp(14),dp(10));box.setBackground(bg(Color.WHITE,16));box.setElevation(dp(2));
+  LinearLayout box=column();box.setPadding(dp(14),dp(10),dp(14),dp(10));box.setBackground(bg(panel(),16));box.setElevation(dp(2));
   box.addView(text(icon+"   "+count,24,purple,true));box.addView(text(label,13,muted,false));
   LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(102),1);lp.setMargins(dp(3),dp(4),dp(3),dp(8));parent.addView(box,lp);
  }
@@ -76,6 +91,13 @@ public class MainActivity extends Activity {
   item.addView(text(("جلسه".equals(kind)?"▣  ":"وظیفه".equals(kind)?"☑  ":"◉  ")+title,17,ink,true));
   String date=e.getAsString("date"),time=e.getAsString("time"),status=e.getAsString("status");
   item.addView(text(Jalali.display(date)+(time==null||time.isEmpty()?"":"  |  "+time)+(status==null||status.isEmpty()?"":"  |  "+status),13,muted,false));
+  if("وظیفه".equals(kind)){
+   LinearLayout controls=new LinearLayout(this);controls.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+   CheckBox done=new CheckBox(this);done.setText("انجام شد");done.setTextColor(ink);done.setChecked("انجام‌شده".equals(status));controls.addView(done);
+   done.setOnCheckedChangeListener((v,checked)->{e.put("status",checked?"انجام‌شده":"انجام‌نشده");db.save(e,e.getAsLong("id"));show(tab);});
+   if(!val(e,"checklist").isEmpty()){Button checklist=button("☑ چک‌لیست");controls.addView(checklist,new LinearLayout.LayoutParams(0,dp(48),1));checklist.setOnClickListener(v->checklistDialog(e));}
+   item.addView(controls);
+  }
   card(body,item);item.setOnClickListener(v->detail(e));
  }
  String val(ContentValues e,String k){return e==null?"":(e.getAsString(k)==null?"":e.getAsString(k));}
@@ -92,13 +114,13 @@ public class MainActivity extends Activity {
   LinkedHashMap<String,EditText> inputs=new LinkedHashMap<>();
   addField(fields,inputs,"title","عنوان *",old,false);
   addDate(fields,inputs,old);
-  addField(fields,inputs,"time","ساعت شروع (مثلاً 09:30)",old,false);
-  if(!kind.equals("وظیفه"))addField(fields,inputs,"endtime","ساعت پایان",old,false);
+  addTime(fields,inputs,"time","ساعت شروع",old);
+  if(!kind.equals("وظیفه"))addTime(fields,inputs,"endtime","ساعت پایان",old);
   addField(fields,inputs,"notes","توضیحات",old,true);
   if(!kind.equals("وظیفه"))addField(fields,inputs,"location","مکان / لینک جلسه",old,false);
   addField(fields,inputs,"people",kind.equals("جلسه")?"شرکت‌کنندگان":kind.equals("وظیفه")?"مسئول":"افراد مرتبط",old,false);
-  addField(fields,inputs,"category","دسته‌بندی / پروژه",old,false);
-  if(kind.equals("وظیفه")){addChoice(fields,inputs,"priority","اولویت",new String[]{"کم","متوسط","زیاد","فوری"},old);addChoice(fields,inputs,"status","وضعیت",new String[]{"انجام‌نشده","درحال انجام","انجام‌شده","متوقف"},old);addField(fields,inputs,"checklist","چک‌لیست / زیر‌وظایف (هر خط یک مورد)",old,true);}
+  addChoice(fields,inputs,"category","دسته‌بندی",categories(),old);
+  if(kind.equals("وظیفه")){addChoice(fields,inputs,"priority","اولویت",new String[]{"کم","متوسط","زیاد","فوری"},old);addChoice(fields,inputs,"status","وضعیت",new String[]{"انجام‌نشده","درحال انجام","انجام‌شده","متوقف"},old);addField(fields,inputs,"checklist","زیر‌وظایف (هر خط یک مورد؛ پس از ذخیره قابل تیک‌زدن)",old,true);}
   addChoice(fields,inputs,"repeat_rule","تکرار (اطلاعات تکرار ثبت می‌شود)",new String[]{"بدون تکرار","روزانه","هفتگی","ماهانه","سالانه"},old);
   addChoice(fields,inputs,"reminder_minutes","زمان یادآوری قبل از شروع",new String[]{"0","5","10","15","30","60","1440"},old);
   if(kind.equals("جلسه"))addField(fields,inputs,"decisions","دستور جلسه، مصوبات و اقدامات بعدی",old,true);
@@ -117,9 +139,10 @@ public class MainActivity extends Activity {
  }
  boolean validTime(String value){if(!value.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9]"))return false;return true;}
  void addField(LinearLayout parent,LinkedHashMap<String,EditText> inputs,String key,String label,ContentValues old,boolean multiline){
-  parent.addView(text(label,14,ink,true));EditText e=new EditText(this);e.setText(val(old,key));e.setTextSize(15);e.setSingleLine(!multiline);e.setTextDirection(View.TEXT_DIRECTION_RTL);e.setGravity(Gravity.RIGHT|Gravity.TOP);e.setBackground(bg(0xfff0eff7,10));e.setPadding(dp(12),dp(12),dp(12),dp(12));if(multiline)e.setMinLines(3);
+  parent.addView(text(label,14,ink,true));EditText e=new EditText(this);e.setText(val(old,key));e.setTextSize(15);e.setSingleLine(!multiline);e.setTextDirection(View.TEXT_DIRECTION_RTL);e.setGravity(Gravity.RIGHT|Gravity.TOP);e.setBackground(bg(fieldColor(),10));e.setTextColor(ink);e.setHintTextColor(muted);e.setPadding(dp(12),dp(12),dp(12),dp(12));if(multiline)e.setMinLines(3);
   LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);parent.addView(e,p);inputs.put(key,e);
  }
+ void addTime(LinearLayout parent,LinkedHashMap<String,EditText> inputs,String key,String label,ContentValues old){addField(parent,inputs,key,label+" (برای انتخاب لمس کنید)",old,false);EditText e=inputs.get(key);e.setFocusable(false);e.setOnClickListener(v->timePicker(e));}
  void addChoice(LinearLayout parent,LinkedHashMap<String,EditText> inputs,String key,String label,String[] opts,ContentValues old){
   addField(parent,inputs,key,label+" (برای انتخاب لمس کنید)",old,false);
   EditText e=inputs.get(key);e.setFocusable(false);e.setOnClickListener(v->new AlertDialog.Builder(this).setTitle(label).setItems(opts,(d,w)->e.setText(opts[w])).show());
@@ -159,7 +182,7 @@ public class MainActivity extends Activity {
   }).setNegativeButton("انصراف",null).show();
  }
  boolean matches(ContentValues e){String q=search.trim().toLowerCase(Locale.ROOT);if(q.isEmpty())return true;return (val(e,"title")+" "+val(e,"notes")+" "+val(e,"people")+" "+val(e,"category")).toLowerCase(Locale.ROOT).contains(q);}
- void searchBox(){EditText field=new EditText(this);field.setSingleLine(true);field.setHint("جست‌وجوی عنوان، توضیح، مسئول یا پروژه");field.setText(search);field.setTextDirection(View.TEXT_DIRECTION_RTL);field.setPadding(dp(12),dp(10),dp(12),dp(10));field.setBackground(bg(Color.WHITE,12));body.addView(field);field.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){search=s.toString();}public void afterTextChanged(android.text.Editable x){}});
+ void searchBox(){EditText field=new EditText(this);field.setSingleLine(true);field.setHint("جست‌وجوی عنوان، توضیح، مسئول یا پروژه");field.setText(search);field.setTextDirection(View.TEXT_DIRECTION_RTL);field.setPadding(dp(12),dp(10),dp(12),dp(10));field.setBackground(bg(panel(),12));field.setTextColor(ink);body.addView(field);field.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){search=s.toString();}public void afterTextChanged(android.text.Editable x){}});
   Button find=button("نمایش نتایج جست‌وجو");body.addView(find);find.setOnClickListener(v->show(tab));
  }
  void calendarPage(){
@@ -193,7 +216,7 @@ public class MainActivity extends Activity {
   int cells=((offset+count+6)/7)*7;LinearLayout row=null;
   for(int i=0;i<cells;i++){
    if(i%7==0){row=new LinearLayout(this);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);body.addView(row);}
-   int day=i-offset+1;TextView cell=text(day>0&&day<=count?""+day:"",15,ink,false);cell.setGravity(Gravity.CENTER);cell.setBackground(bg(Color.WHITE,9));LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(54),1);cp.setMargins(dp(2),dp(2),dp(2),dp(2));row.addView(cell,cp);
+   int day=i-offset+1;TextView cell=text(day>0&&day<=count?""+day:"",15,ink,false);cell.setGravity(Gravity.CENTER);cell.setBackground(bg(panel(),9));LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(54),1);cp.setMargins(dp(2),dp(2),dp(2),dp(2));row.addView(cell,cp);
    if(day>0&&day<=count){String iso=Jalali.iso(year,month,day);int events=0;for(ContentValues e:all)if(Recurrence.occurs(e,iso))events++;if(events>0){cell.setText(day+"\n• "+events);cell.setTextColor(purple);}cell.setOnClickListener(v->dayDetails(iso));}
   }
  }
