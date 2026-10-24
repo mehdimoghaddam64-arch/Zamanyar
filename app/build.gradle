@@ -2,6 +2,6 @@ plugins { id 'com.android.application' }
 android {
  namespace 'ir.zamanyar.app'
  compileSdk 35
- defaultConfig { applicationId 'ir.zamanyar.app'; minSdk 24; targetSdk 28; versionCode 10; versionName '1.4.0-dashboard-rebuild' }
+ defaultConfig { applicationId 'ir.zamanyar.app'; minSdk 24; targetSdk 28; versionCode 11; versionName '1.5.0-green-calendar' }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }

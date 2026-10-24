@@ -5,7 +5,7 @@ public class ReminderScheduler {
  public static void schedule(Context context,long id,ContentValues v){try{
   String date=v.getAsString("date"),time=v.getAsString("time");if(date==null||time==null)return;
   SimpleDateFormat fmt=new SimpleDateFormat("yyyy-MM-dd HH:mm",Locale.US);fmt.setLenient(false);
-  int minutes=0;try{minutes=Integer.parseInt(v.getAsString("reminder_minutes"));}catch(Exception ignored){}
+  int minutes=0;try{minutes=Integer.parseInt(v.getAsString("reminder_minutes"));}catch(Exception ignored){}if(minutes<0)return;
   long when=fmt.parse(date+" "+time).getTime()-minutes*60000L;
   if(when<=System.currentTimeMillis()){
    Calendar cursor=Calendar.getInstance();cursor.add(Calendar.DATE,-2);
