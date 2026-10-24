@@ -12,6 +12,19 @@ import java.util.*;
 import java.text.*;
 public class MainActivity extends Activity {
  Db db; LinearLayout base,body,nav; String tab="داشبورد";
+ Typeface iranRegular, iranMedium, iranBold, iranBlack, iranLight;
+ Typeface loadFont(String filename, Typeface fallback){
+  try {return Typeface.createFromAsset(getAssets(),"fonts/"+filename);}catch(Exception ignored){return fallback;}
+ }
+ void initFonts(){
+  iranRegular=loadFont("IRANSansMobile.ttf",Typeface.DEFAULT);
+  iranMedium=loadFont("IRANSansMobile_Medium.ttf",Typeface.DEFAULT);
+  iranBold=loadFont("IRANSansMobile_Bold.ttf",Typeface.DEFAULT_BOLD);
+  iranBlack=loadFont("IRANSansMobile_Black.ttf",Typeface.DEFAULT_BOLD);
+  iranLight=loadFont("IRANSansMobile_Light.ttf",Typeface.DEFAULT);
+ }
+ void styleInput(TextView view){view.setTypeface(iranRegular!=null?iranRegular:Typeface.DEFAULT);}
+
  int ink=Color.rgb(33,37,62),purple=Color.rgb(92,71,194),muted=Color.rgb(115,120,140);
  int surface=0xfff6f5fc; boolean dark=true; android.content.SharedPreferences prefs;
  int panel(){return dark?0xff1c202b:Color.WHITE;} int fieldColor(){return dark?0xff282d3a:0xfff0eff7;}
@@ -19,10 +32,10 @@ public class MainActivity extends Activity {
  String[] categories(){String raw=prefs.getString("categories","مالی\nکاری\nمارکتینگ\nخرید\nشخصی");return raw.split("\n");}
  void settings(){
   LinearLayout panel=column();panel.setPadding(dp(18),dp(12),dp(18),dp(12));
-  Switch mode=new Switch(this);mode.setText("حالت تیره");mode.setTextColor(ink);mode.setChecked(dark);panel.addView(mode);
+  Switch mode=new Switch(this);styleInput(mode);mode.setText("حالت تیره");mode.setTextColor(ink);mode.setChecked(dark);panel.addView(mode);
   mode.setOnCheckedChangeListener((v,checked)->{prefs.edit().putBoolean("dark",checked).apply();dark=checked;applyTheme();show("داشبورد");});
   panel.addView(text("دسته‌بندی‌ها (هر سطر یک دسته)",16,ink,true));
-  EditText list=new EditText(this);list.setText(prefs.getString("categories","مالی\nکاری\nمارکتینگ\nخرید\nشخصی"));list.setMinLines(6);list.setTextColor(ink);list.setBackground(bg(fieldColor(),12));list.setPadding(dp(12),dp(12),dp(12),dp(12));panel.addView(list);
+  EditText list=new EditText(this);styleInput(list);list.setText(prefs.getString("categories","مالی\nکاری\nمارکتینگ\nخرید\nشخصی"));list.setMinLines(6);list.setTextColor(ink);list.setBackground(bg(fieldColor(),12));list.setPadding(dp(12),dp(12),dp(12),dp(12));panel.addView(list);
   new AlertDialog.Builder(this).setTitle("تنظیمات زمان‌یار").setView(panel).setPositiveButton("ذخیره دسته‌بندی‌ها",(d,w)->{LinkedHashSet<String> names=new LinkedHashSet<>();for(String name:list.getText().toString().split("\n")){name=name.trim();if(!name.isEmpty())names.add(name);}prefs.edit().putString("categories",android.text.TextUtils.join("\n",names)).apply();show(tab);}).setNegativeButton("بستن",null).show();
  }
  void applyTheme(){surface=dark?0xff101319:0xfff6f5fc;ink=dark?0xfff1efff:0xff21253e;muted=dark?0xffa5a8b8:0xff73788c;purple=dark?0xff895cff:0xff5c47c2;getWindow().setStatusBarColor(surface);getWindow().setNavigationBarColor(surface);getWindow().getDecorView().setSystemUiVisibility(dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);}
@@ -33,18 +46,21 @@ public class MainActivity extends Activity {
  String search=""; int weekOffset=0,monthOffset=0; boolean monthMode=true; static final int BACKUP_CREATE=501,BACKUP_OPEN=502;
  int dp(float n){return (int)(getResources().getDisplayMetrics().density*n+.5f);}
  GradientDrawable bg(int color,int radius){GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(radius));return d;}
- @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(purple);getWindow().setNavigationBarColor(Color.WHITE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);prefs=getSharedPreferences("zamanyar_ui",MODE_PRIVATE);dark=prefs.getBoolean("dark",true);applyTheme();db=new Db(this);if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},12);show("داشبورد");}
- TextView text(String s,int size,int color,boolean bold){TextView t=new TextView(this);t.setText(fa(s));t.setTextColor(color);t.setTextSize(size);t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);t.setTextDirection(View.TEXT_DIRECTION_RTL);t.setPadding(dp(4),dp(6),dp(4),dp(6));if(bold)t.setTypeface(null,Typeface.BOLD);return t;}
+ @Override public void onCreate(Bundle b){super.onCreate(b);getWindow().setStatusBarColor(purple);getWindow().setNavigationBarColor(Color.WHITE);getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);prefs=getSharedPreferences("zamanyar_ui",MODE_PRIVATE);dark=prefs.getBoolean("dark",true);applyTheme();db=new Db(this);initFonts();if(Build.VERSION.SDK_INT>=33&&checkSelfPermission("android.permission.POST_NOTIFICATIONS")!=getPackageManager().PERMISSION_GRANTED)requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"},12);show("داشبورد");}
+ TextView text(String s,int size,int color,boolean bold){TextView t=new TextView(this);t.setText(fa(s));t.setTextColor(color);t.setTextSize(size);t.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);t.setTextDirection(View.TEXT_DIRECTION_RTL);t.setPadding(dp(4),dp(6),dp(4),dp(6));t.setTypeface(bold?iranBold:iranRegular);return t;}
  LinearLayout column(){LinearLayout l=new LinearLayout(this);l.setOrientation(1);l.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);return l;}
  void show(String t){
   tab=t;base=column();base.setBackgroundColor(surface);setContentView(base);
-  LinearLayout head=column();head.setBackgroundColor(panel());head.setPadding(dp(22),dp(22),dp(22),dp(22));
-  TextView title=text("زمان‌یار  •  "+t,24,Color.WHITE,true);head.addView(title);
-  TextView sub=text("برنامه‌ریزی دقیق، ذهن آسوده",13,0xffe7e1ff,false);head.addView(sub);TextView settings=text("⚙  تنظیمات",14,0xffbba7ff,true);head.addView(settings);settings.setOnClickListener(v->settings());base.addView(head);
-  ScrollView scroll=new ScrollView(this);body=column();body.setPadding(dp(14),dp(12),dp(14),dp(20));scroll.addView(body);base.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+  LinearLayout head=column();head.setPadding(dp(20),dp(12),dp(20),dp(14));head.setBackgroundColor(surface);
+  LinearLayout headline=new LinearLayout(this);headline.setGravity(Gravity.CENTER_VERTICAL);headline.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+  TextView title=text("زمان‌یار",28,ink,true);headline.addView(title,new LinearLayout.LayoutParams(0,-2,1));
+  TextView gear=text("⚙",25,purple,true);gear.setGravity(Gravity.CENTER);headline.addView(gear,new LinearLayout.LayoutParams(dp(48),dp(48)));gear.setOnClickListener(v->settings());
+  head.addView(headline);head.addView(text("برنامه‌ریزی دقیق، ذهن آسوده",13,muted,false));base.addView(head);
+  ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);body=column();body.setPadding(dp(16),dp(5),dp(16),dp(20));scroll.addView(body);base.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
   if(t.equals("داشبورد"))dashboard();else if(t.equals("تقویم")){if(monthMode)monthPage();else calendarPage();}else if(t.equals("گزارش"))reportPage();else listing(t);
-  nav=new LinearLayout(this);nav.setElevation(dp(9));nav.setBackgroundColor(panel());nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-  String[] icons={"⌂","▦","▣","☑","◉","▥"};for(int i=0;i<tabs.length;i++){final String s=tabs[i];TextView b=text(icons[i]+"\n"+s,11,s.equals(t)?purple:muted,s.equals(t));b.setGravity(Gravity.CENTER);nav.addView(b,new LinearLayout.LayoutParams(0,dp(66),1));b.setOnClickListener(v->show(s));}
+  nav=new LinearLayout(this);nav.setElevation(dp(9));nav.setPadding(dp(5),dp(5),dp(5),dp(7));nav.setBackgroundColor(panel());nav.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+  String[] names={"داشبورد","تقویم","افزودن","وظیفه","جلسه","گزارش"};String[] icons={"⌂","▦","+","☑","▣","▥"};
+  for(int i=0;i<names.length;i++){final String s=names[i];LinearLayout cell=column();cell.setGravity(Gravity.CENTER);TextView icon=text(icons[i],i==2?32:23,i==2?Color.WHITE:s.equals(t)?purple:muted,true);icon.setGravity(Gravity.CENTER);cell.addView(icon);if(i!=2){TextView label=text(s,10,s.equals(t)?purple:muted,s.equals(t));label.setGravity(Gravity.CENTER);cell.addView(label);}else{cell.setBackground(bg(purple,22));}LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(59),i==2?1.15f:1);cp.setMargins(dp(2),0,dp(2),0);nav.addView(cell,cp);cell.setOnClickListener(v->{if(s.equals("افزودن"))chooseType();else show(s);});}
   base.addView(nav);
  }
  void card(LinearLayout parent,View content){
@@ -54,28 +70,24 @@ public class MainActivity extends Activity {
  void dashboard(){
   ArrayList<ContentValues> all=db.all("همه");int meetings=0,tasks=0,events=0,done=0,overdue=0;
   String today=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(new Date());
-  for(ContentValues e:all){String k=e.getAsString("kind");if("جلسه".equals(k))meetings++;if("وظیفه".equals(k)){tasks++;if("انجام‌شده".equals(e.getAsString("status")))done++;else if(!val(e,"date").isEmpty()&&val(e,"date").compareTo(today)<0)overdue++;}if("رویداد".equals(k))events++;}
-  body.addView(text("امروز  •  "+Jalali.display(today),18,purple,true));
-  LinearLayout row=new LinearLayout(this);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-  metric(row,"جلسات",meetings,"▣",0xfffff1e5);metric(row,"وظایف",tasks,"☑",0xffe9f8f1);body.addView(row);
-  LinearLayout second=new LinearLayout(this);second.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-  metric(second,"رویدادها",events,"◉",0xffeeeafe);metric(second,"معوق",overdue,"!",0xffffe9ef);body.addView(second);
-  body.addView(text("پیشرفت وظایف",17,ink,true));
-  ProgressBar progress=new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal);progress.setMax(Math.max(tasks,1));progress.setProgress(done);body.addView(progress);
-  body.addView(text(done+" از "+tasks+" وظیفه انجام شده",13,muted,false));
-  body.addView(text("برنامه‌های امروز",19,ink,true));int todayCount=0;
-  for(ContentValues e:all)if(Recurrence.occurs(e,today)){entryCard(e);todayCount++;}
-  if(todayCount==0)card(body,text("امروز برنامه‌ای ثبت نشده است.",15,muted,false));
-  body.addView(text("سایر برنامه‌ها",19,ink,true));
-  for(ContentValues e:all)if(!Recurrence.occurs(e,today)&&matches(e))entryCard(e);
-  Button add=button("+ ثبت برنامه جدید");body.addView(add);add.setOnClickListener(v->chooseType());
+  for(ContentValues e:all){String k=val(e,"kind");if("جلسه".equals(k))meetings++;if("وظیفه".equals(k)){tasks++;if("انجام‌شده".equals(val(e,"status")))done++;else if(!val(e,"date").isEmpty()&&val(e,"date").compareTo(today)<0)overdue++;}if("رویداد".equals(k))events++;}
+  LinearLayout calendar=column();calendar.setPadding(dp(12),dp(10),dp(12),dp(10));calendar.setBackground(bg(panel(),18));
+  LinearLayout calTop=new LinearLayout(this);calTop.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);calTop.setGravity(Gravity.CENTER_VERTICAL);
+  TextView date=text(Jalali.display(today),17,ink,true);calTop.addView(date,new LinearLayout.LayoutParams(0,-2,1));TextView calButton=text("تقویم  ◀",13,purple,true);calTop.addView(calButton);calButton.setOnClickListener(v->show("تقویم"));calendar.addView(calTop);
+  LinearLayout modes=new LinearLayout(this);modes.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);for(String m:new String[]{"امروز","هفته","ماه"}){TextView chip=text(m,13,m.equals("امروز")?Color.WHITE:muted,true);chip.setGravity(Gravity.CENTER);chip.setBackground(bg(m.equals("امروز")?purple:fieldColor(),12));LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(38),1);cp.setMargins(dp(3),dp(6),dp(3),dp(6));modes.addView(chip,cp);chip.setOnClickListener(v->{if(m.equals("امروز"))show("داشبورد");else{monthMode=m.equals("ماه");show("تقویم");}});}calendar.addView(modes);
+  LinearLayout week=new LinearLayout(this);week.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);String[] dayNames={"ش","ی","د","س","چ","پ","ج"};Calendar now=Calendar.getInstance();int weekday=now.get(Calendar.DAY_OF_WEEK);int idx=weekday%7;for(int i=0;i<7;i++){int shift=i-idx;Calendar c=(Calendar)now.clone();c.add(Calendar.DAY_OF_YEAR,shift);String iso=new SimpleDateFormat("yyyy-MM-dd",Locale.US).format(c.getTime());String jd=Jalali.display(iso);String[] parts=jd.split("/");LinearLayout day=column();day.setGravity(Gravity.CENTER);day.setBackground(bg(shift==0?purple:fieldColor(),12));day.addView(centerText(dayNames[i],11,shift==0?Color.WHITE:muted,false));day.addView(centerText(parts.length>2?parts[2]:"",15,shift==0?Color.WHITE:ink,true));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(58),1);lp.setMargins(dp(2),0,dp(2),0);week.addView(day,lp);day.setOnClickListener(v->dayDetails(iso));}calendar.addView(week);body.addView(calendar);space(12);
+  LinearLayout stats=new LinearLayout(this);stats.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);metric(stats,"جلسات",meetings,"▣",0xff9566ff);metric(stats,"وظایف",tasks,"☑",0xff33d69b);metric(stats,"رویداد",events,"◉",0xffff994f);metric(stats,"معوق",overdue,"!",0xffff627e);body.addView(stats);space(10);
+  sectionHeader("برنامه‌های امروز","مشاهده همه",()->show("تقویم"));LinearLayout agenda=column();agenda.setPadding(dp(9),dp(8),dp(9),dp(8));agenda.setBackground(bg(panel(),18));int todayCount=0;for(ContentValues e:all)if(Recurrence.occurs(e,today)){agendaRow(agenda,e);todayCount++;}if(todayCount==0)agenda.addView(text("امروز برنامه‌ای ثبت نشده است.",14,muted,false));body.addView(agenda);space(14);
+  sectionHeader("وظایف امروز ("+done+"/"+tasks+")","+ افزودن وظیفه",()->edit("وظیفه",null));LinearLayout taskList=column();taskList.setPadding(dp(10),dp(8),dp(10),dp(8));taskList.setBackground(bg(panel(),18));int taskShown=0;for(ContentValues e:all)if("وظیفه".equals(val(e,"kind"))&&(Recurrence.occurs(e,today)||val(e,"date").isEmpty())){taskRow(taskList,e);taskShown++;}if(taskShown==0)taskList.addView(text("وظیفه‌ای برای امروز ثبت نشده است.",14,muted,false));body.addView(taskList);space(14);
+  sectionHeader("دسته‌بندی‌ها","مدیریت دسته‌ها",()->settings());LinearLayout cats=new LinearLayout(this);cats.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);cats.setGravity(Gravity.CENTER_VERTICAL);String[] names=categories();int[] colors={0xff31d69a,0xff55a4ff,0xffff9a42,0xffa16bff,0xffff657e};for(int i=0;i<Math.min(names.length,4);i++){final String name=names[i];TextView chip=centerText(name,12,ink,true);chip.setBackground(bg(panel(),13));LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(49),1);cp.setMargins(dp(3),0,dp(3),0);cats.addView(chip,cp);chip.setOnClickListener(v->show("وظیفه"));}body.addView(cats);space(12);
   Button backup=button("پشتیبان‌گیری و بازیابی");body.addView(backup);backup.setOnClickListener(v->backupMenu());
  }
- void metric(LinearLayout parent,String label,int count,String icon,int color){
-  LinearLayout box=column();box.setPadding(dp(14),dp(10),dp(14),dp(10));box.setBackground(bg(panel(),16));box.setElevation(dp(2));
-  box.addView(text(icon+"   "+count,24,purple,true));box.addView(text(label,13,muted,false));
-  LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(102),1);lp.setMargins(dp(3),dp(4),dp(3),dp(8));parent.addView(box,lp);
- }
+ TextView centerText(String s,int size,int color,boolean bold){TextView t=text(s,size,color,bold);t.setGravity(Gravity.CENTER);return t;}
+ void space(int height){Space sp=new Space(this);body.addView(sp,new LinearLayout.LayoutParams(1,dp(height)));}
+ void sectionHeader(String name,String action,Runnable run){LinearLayout line=new LinearLayout(this);line.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);line.setGravity(Gravity.CENTER_VERTICAL);TextView heading=text(name,18,ink,true);line.addView(heading,new LinearLayout.LayoutParams(0,dp(52),1));TextView link=text(action,12,purple,true);line.addView(link);link.setOnClickListener(v->run.run());body.addView(line);}
+ void agendaRow(LinearLayout parent,ContentValues e){LinearLayout row=new LinearLayout(this);row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);row.setGravity(Gravity.CENTER_VERTICAL);TextView marker=centerText("▌",23,"وظیفه".equals(val(e,"kind"))?0xff55a4ff:purple,true);row.addView(marker,new LinearLayout.LayoutParams(dp(26),dp(60)));LinearLayout details=column();details.addView(text(val(e,"title"),15,ink,true));details.addView(text(val(e,"category")+"  •  "+val(e,"kind"),12,muted,false));row.addView(details,new LinearLayout.LayoutParams(0,-2,1));row.addView(text(val(e,"time"),13,purple,true));parent.addView(row);row.setOnClickListener(v->detail(e));}
+ void taskRow(LinearLayout parent,ContentValues e){LinearLayout line=new LinearLayout(this);line.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);line.setGravity(Gravity.CENTER_VERTICAL);CheckBox cb=new CheckBox(this);styleInput(cb);boolean checked="انجام‌شده".equals(val(e,"status"));cb.setChecked(checked);cb.setButtonTintList(android.content.res.ColorStateList.valueOf(purple));line.addView(cb);TextView name=text(val(e,"title"),14,checked?muted:ink,false);if(checked)name.setPaintFlags(name.getPaintFlags()|android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);line.addView(name,new LinearLayout.LayoutParams(0,dp(55),1));TextView tag=text(val(e,"category"),11,purple,true);line.addView(tag);parent.addView(line);cb.setOnCheckedChangeListener((v,on)->{e.put("status",on?"انجام‌شده":"انجام‌نشده");db.save(e,e.getAsLong("id"));show(tab);});name.setOnClickListener(v->detail(e));}
+ void metric(LinearLayout parent,String label,int count,String icon,int color){LinearLayout box=column();box.setGravity(Gravity.CENTER);box.setPadding(dp(3),dp(8),dp(3),dp(8));box.setBackground(bg(panel(),17));TextView symbol=centerText(icon,21,color,true);box.addView(symbol);TextView number=centerText(String.valueOf(count),25,ink,true);box.addView(number);box.addView(centerText(label,11,muted,false));LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(0,dp(115),1);lp.setMargins(dp(2),0,dp(2),0);parent.addView(box,lp);}
  void chooseType(){new AlertDialog.Builder(this).setTitle("نوع برنامه").setItems(new String[]{"جلسه","وظیفه","رویداد"},(d,w)->edit(new String[]{"جلسه","وظیفه","رویداد"}[w],null)).show();}
  void listing(String kind){
   Button add=button("+ افزودن "+kind);body.addView(add);add.setOnClickListener(v->edit(kind,null));
@@ -84,7 +96,7 @@ public class MainActivity extends Activity {
   if(all.isEmpty())card(body,text("موردی در این بخش ثبت نشده است.",15,muted,false));
   for(ContentValues e:all)if(matches(e))entryCard(e);
  }
- Button button(String label){Button b=new Button(this);b.setText(label);b.setTextColor(Color.WHITE);b.setAllCaps(false);b.setBackground(bg(purple,12));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(52));p.bottomMargin=dp(12);b.setLayoutParams(p);return b;}
+ Button button(String label){Button b=new Button(this);styleInput(b);b.setText(fa(label));b.setTextColor(Color.WHITE);b.setAllCaps(false);b.setBackground(bg(purple,12));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(52));p.bottomMargin=dp(12);b.setLayoutParams(p);return b;}
  void entryCard(ContentValues e){
   LinearLayout item=column();
   String title=e.getAsString("title"),kind=e.getAsString("kind");
@@ -93,7 +105,7 @@ public class MainActivity extends Activity {
   item.addView(text(Jalali.display(date)+(time==null||time.isEmpty()?"":"  |  "+time)+(status==null||status.isEmpty()?"":"  |  "+status),13,muted,false));
   if("وظیفه".equals(kind)){
    LinearLayout controls=new LinearLayout(this);controls.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
-   CheckBox done=new CheckBox(this);done.setText("انجام شد");done.setTextColor(ink);done.setChecked("انجام‌شده".equals(status));controls.addView(done);
+   CheckBox done=new CheckBox(this);styleInput(done);done.setText("انجام شد");done.setTextColor(ink);done.setChecked("انجام‌شده".equals(status));controls.addView(done);
    done.setOnCheckedChangeListener((v,checked)->{e.put("status",checked?"انجام‌شده":"انجام‌نشده");db.save(e,e.getAsLong("id"));show(tab);});
    if(!val(e,"checklist").isEmpty()){Button checklist=button("☑ چک‌لیست");controls.addView(checklist,new LinearLayout.LayoutParams(0,dp(48),1));checklist.setOnClickListener(v->checklistDialog(e));}
    item.addView(controls);
@@ -139,7 +151,7 @@ public class MainActivity extends Activity {
  }
  boolean validTime(String value){if(!value.matches("(?:[01][0-9]|2[0-3]):[0-5][0-9]"))return false;return true;}
  void addField(LinearLayout parent,LinkedHashMap<String,EditText> inputs,String key,String label,ContentValues old,boolean multiline){
-  parent.addView(text(label,14,ink,true));EditText e=new EditText(this);e.setText(val(old,key));e.setTextSize(15);e.setSingleLine(!multiline);e.setTextDirection(View.TEXT_DIRECTION_RTL);e.setGravity(Gravity.RIGHT|Gravity.TOP);e.setBackground(bg(fieldColor(),10));e.setTextColor(ink);e.setHintTextColor(muted);e.setPadding(dp(12),dp(12),dp(12),dp(12));if(multiline)e.setMinLines(3);
+  parent.addView(text(label,14,ink,true));EditText e=new EditText(this);styleInput(e);e.setText(val(old,key));e.setTextSize(15);e.setSingleLine(!multiline);e.setTextDirection(View.TEXT_DIRECTION_RTL);e.setGravity(Gravity.RIGHT|Gravity.TOP);e.setBackground(bg(fieldColor(),10));e.setTextColor(ink);e.setHintTextColor(muted);e.setPadding(dp(12),dp(12),dp(12),dp(12));if(multiline)e.setMinLines(3);
   LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);parent.addView(e,p);inputs.put(key,e);
  }
  void addTime(LinearLayout parent,LinkedHashMap<String,EditText> inputs,String key,String label,ContentValues old){addField(parent,inputs,key,label+" (برای انتخاب لمس کنید)",old,false);EditText e=inputs.get(key);e.setFocusable(false);e.setOnClickListener(v->timePicker(e));}
@@ -182,7 +194,7 @@ public class MainActivity extends Activity {
   }).setNegativeButton("انصراف",null).show();
  }
  boolean matches(ContentValues e){String q=search.trim().toLowerCase(Locale.ROOT);if(q.isEmpty())return true;return (val(e,"title")+" "+val(e,"notes")+" "+val(e,"people")+" "+val(e,"category")).toLowerCase(Locale.ROOT).contains(q);}
- void searchBox(){EditText field=new EditText(this);field.setSingleLine(true);field.setHint("جست‌وجوی عنوان، توضیح، مسئول یا پروژه");field.setText(search);field.setTextDirection(View.TEXT_DIRECTION_RTL);field.setPadding(dp(12),dp(10),dp(12),dp(10));field.setBackground(bg(panel(),12));field.setTextColor(ink);body.addView(field);field.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){search=s.toString();}public void afterTextChanged(android.text.Editable x){}});
+ void searchBox(){EditText field=new EditText(this);styleInput(field);field.setSingleLine(true);field.setHint("جست‌وجوی عنوان، توضیح، مسئول یا پروژه");field.setText(search);field.setTextDirection(View.TEXT_DIRECTION_RTL);field.setPadding(dp(12),dp(10),dp(12),dp(10));field.setBackground(bg(panel(),12));field.setTextColor(ink);body.addView(field);field.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int st,int c,int a){}public void onTextChanged(CharSequence s,int st,int before,int count){search=s.toString();}public void afterTextChanged(android.text.Editable x){}});
   Button find=button("نمایش نتایج جست‌وجو");body.addView(find);find.setOnClickListener(v->show(tab));
  }
  void calendarPage(){
